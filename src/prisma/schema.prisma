@@ -1,0 +1,87 @@
+// ─────────────────────────────────────────────────────────────
+// Esquema de base de datos — Bola 8 Barbería
+// PostgreSQL + Prisma ORM
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Estados posibles de una cita.
+enum EstadoCita {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
+}
+
+/// Cliente de la barbería. Se identifica de forma única por su teléfono.
+model Cliente {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  telefono  String   @unique
+  createdAt DateTime @default(now())
+
+  citas Cita[]
+
+  @@map("clientes")
+}
+
+/// Barbero que atiende las citas.
+model Barbero {
+  id     Int     @id @default(autoincrement())
+  nombre String
+  activo Boolean @default(true)
+
+  citas Cita[]
+
+  @@map("barberos")
+}
+
+/// Servicio ofrecido (corte, barba, etc.) con su duración y precio.
+model Servicio {
+  id              Int     @id @default(autoincrement())
+  nombre          String
+  duracionMinutos Int
+  precio          Decimal @db.Decimal(10, 2)
+
+  citas Cita[]
+
+  @@map("servicios")
+}
+
+/// Una cita agendada. `fecha` guarda el día; `horaInicio`/`horaFin` el rango "HH:MM".
+model Cita {
+  id         Int        @id @default(autoincrement())
+  clienteId  Int
+  barberoId  Int
+  servicioId Int
+  fecha      DateTime   @db.Date
+  horaInicio String // formato "HH:MM"
+  horaFin    String // formato "HH:MM"
+  estado     EstadoCita @default(PENDIENTE)
+  creadaEn   DateTime   @default(now())
+
+  cliente  Cliente  @relation(fields: [clienteId], references: [id])
+  barbero  Barbero  @relation(fields: [barberoId], references: [id])
+  servicio Servicio @relation(fields: [servicioId], references: [id])
+
+  @@index([fecha, barberoId])
+  @@index([estado])
+  @@map("citas")
+}
+
+/// Estado de la conversación de WhatsApp por teléfono (máquina de estados del bot).
+model Conversacion {
+  id            Int      @id @default(autoincrement())
+  telefono      String   @unique
+  estado        String   @default("INICIO")
+  datosTemp     Json     @default("{}")
+  actualizadaEn DateTime @updatedAt
+
+  @@map("conversaciones")
+}
