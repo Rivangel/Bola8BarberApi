@@ -1,0 +1,21 @@
+services:
+  bola8-db:
+    image: postgres:15
+    container_name: bola8_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bola8user
+      POSTGRES_PASSWORD: bola8pass
+      POSTGRES_DB: barberbola8
+    ports:
+      - "5432:5432"
+    volumes:
+      - bola8_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bola8user -d barberbola8"]
+      interval: 5s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  bola8_data:
