@@ -4,6 +4,7 @@ import prisma from './src/prisma/client';
 import webhookRoutes from './src/routes/webhook.routes';
 import citasRoutes from './src/routes/citas.routes';
 import clientesRoutes from './src/routes/clientes.routes';
+import catalogoRoutes from './src/routes/catalogo.routes';
 import { iniciarProgramador } from './src/jobs/reminders';
 
 /**
@@ -12,6 +13,19 @@ import { iniciarProgramador } from './src/jobs/reminders';
  */
 
 const app = express();
+
+// CORS permisivo: la app de administración (Expo) consume esta API desde otro
+// origen. En producción conviene restringir `Access-Control-Allow-Origin`.
+app.use((req: Request, res: Response, next: NextFunction) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
 
 // Parser JSON que además guarda el cuerpo crudo (necesario para verificar la
 // firma x-hub-signature-256 del webhook de Meta).
@@ -34,6 +48,7 @@ app.use('/', webhookRoutes);
 // API REST de administración.
 app.use('/api', citasRoutes);
 app.use('/api', clientesRoutes);
+app.use('/api', catalogoRoutes);
 
 // Manejador de rutas no encontradas.
 app.use((_req, res) => {
