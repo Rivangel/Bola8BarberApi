@@ -32,6 +32,10 @@ export const env = {
   nodeEnv: optional('NODE_ENV', 'development'),
   // URL base de la Graph API de Meta
   graphApiVersion: optional('GRAPH_API_VERSION', 'v21.0'),
+  // Secreto para firmar/verificar los JWT del login del panel.
+  jwtSecret: required('JWT_SECRET'),
+  // Vigencia del token (formato de `jsonwebtoken`, p. ej. "7d", "12h").
+  jwtExpire: optional('JWT_EXPIRE', '7d'),
 };
 
 export type Env = typeof env;

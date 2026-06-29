@@ -2,9 +2,11 @@ import express, { Request, Response, NextFunction } from 'express';
 import { env } from './src/config/env';
 import prisma from './src/prisma/client';
 import webhookRoutes from './src/routes/webhook.routes';
+import authRoutes from './src/routes/auth.routes';
 import citasRoutes from './src/routes/citas.routes';
 import clientesRoutes from './src/routes/clientes.routes';
 import catalogoRoutes from './src/routes/catalogo.routes';
+import { requireAuth } from './src/middleware/requireAuth';
 import { iniciarProgramador } from './src/jobs/reminders';
 
 /**
@@ -46,6 +48,9 @@ app.get('/', (_req, res) => {
 app.use('/', webhookRoutes);
 
 // API REST de administración.
+// Las rutas de auth (login) son públicas; el resto requiere un JWT válido.
+app.use('/api', authRoutes);
+app.use('/api', requireAuth);
 app.use('/api', citasRoutes);
 app.use('/api', clientesRoutes);
 app.use('/api', catalogoRoutes);

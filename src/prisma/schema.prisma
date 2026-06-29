@@ -19,6 +19,26 @@ enum EstadoCita {
   COMPLETADA
 }
 
+/// Roles de los usuarios que inician sesión en el panel de administración.
+enum RolUsuario {
+  ADMIN
+  BARBERO
+}
+
+/// Usuario del panel de administración (login con email + contraseña).
+/// Separado de `Barbero`, que solo es un recurso de agenda.
+model Usuario {
+  id           Int        @id @default(autoincrement())
+  nombre       String
+  email        String     @unique
+  passwordHash String
+  rol          RolUsuario @default(ADMIN)
+  activo       Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  @@map("usuarios")
+}
+
 /// Cliente de la barbería. Se identifica de forma única por su teléfono.
 model Cliente {
   id        Int      @id @default(autoincrement())
