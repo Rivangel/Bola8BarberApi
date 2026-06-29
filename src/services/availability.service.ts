@@ -4,12 +4,12 @@ import { horaAMinutos, sumarMinutos } from '../utils/dates';
 /**
  * Lógica de disponibilidad de horarios.
  *
- * Jornada laboral: 09:00 a 19:00. Los slots se generan cada 30 minutos.
+ * Jornada laboral: 11:00 a 19:00. Los slots se generan cada 30 minutos.
  * Un slot es válido si la cita completa (slot + duración del servicio) termina
  * a más tardar a las 19:00 y no se solapa con ninguna cita existente del barbero.
  */
 
-export const APERTURA = '09:00';
+export const APERTURA = '11:00';
 export const CIERRE = '19:00';
 export const PASO_MINUTOS = 30;
 
