@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import { PrismaClient, EstadoCita } from '@prisma/client';
+import bcrypt from 'bcrypt';
+import { PrismaClient, EstadoCita, RolUsuario } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
@@ -49,13 +50,31 @@ async function main() {
     }
   }
 
+  // ── Usuario administrador (login del panel) ─────────────────
+  // Credenciales por defecto (cámbialas en producción):
+  //   email: admin@bola8.com   ·   contraseña: admin1234
+  const adminEmail = 'admin@bola8.com';
+  const adminPassword = 'admin1234';
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
+  await prisma.usuario.upsert({
+    where: { email: adminEmail },
+    update: {}, // no pisamos la contraseña si ya existe
+    create: {
+      nombre: 'Administrador',
+      email: adminEmail,
+      passwordHash,
+      rol: RolUsuario.ADMIN,
+    },
+  });
+
   // ── Servicios ───────────────────────────────────────────────
+  // Catálogo en pesos mexicanos (MXN). Los nombres coinciden con los del app
+  // (`SERVICES` en types.ts) para que al agendar se resuelva el servicio por nombre.
   const servicios = [
-    { nombre: 'Corte de cabello', duracionMinutos: 30, precio: 150.0 },
-    { nombre: 'Corte + Barba', duracionMinutos: 45, precio: 220.0 },
-    { nombre: 'Arreglo de barba', duracionMinutos: 20, precio: 100.0 },
-    { nombre: 'Corte infantil', duracionMinutos: 30, precio: 120.0 },
-    { nombre: 'Corte + Diseño', duracionMinutos: 60, precio: 280.0 },
+    { nombre: 'Corte', duracionMinutos: 30, precio: 120.0 },
+    { nombre: 'Barba', duracionMinutos: 20, precio: 90.0 },
+    { nombre: 'Corte + Barba', duracionMinutos: 45, precio: 190.0 },
+    { nombre: 'Afeitado clásico', duracionMinutos: 30, precio: 110.0 },
   ];
   for (const s of servicios) {
     const existente = await prisma.servicio.findFirst({ where: { nombre: s.nombre } });
@@ -94,7 +113,7 @@ async function main() {
       { tel: clientes[0].telefono, b: 0, s: 1, off: 0, hi: '11:00', estado: EstadoCita.CONFIRMADA },
       { tel: clientes[1].telefono, b: 1, s: 0, off: 0, hi: '11:30', estado: EstadoCita.CONFIRMADA },
       { tel: clientes[2].telefono, b: 2, s: 2, off: 0, hi: '12:00', estado: EstadoCita.PENDIENTE },
-      { tel: clientes[3].telefono, b: 0, s: 4, off: 0, hi: '13:00', estado: EstadoCita.CONFIRMADA },
+      { tel: clientes[3].telefono, b: 0, s: 3, off: 0, hi: '13:00', estado: EstadoCita.CONFIRMADA },
       { tel: clientes[4].telefono, b: 1, s: 3, off: 1, hi: '11:30', estado: EstadoCita.CONFIRMADA },
       { tel: clientes[5].telefono, b: 2, s: 0, off: 1, hi: '12:30', estado: EstadoCita.PENDIENTE },
       { tel: clientes[6].telefono, b: 0, s: 1, off: 2, hi: '16:00', estado: EstadoCita.CONFIRMADA },
@@ -123,13 +142,16 @@ async function main() {
     }
   }
 
-  const [tb, ts, tc, tcit] = await Promise.all([
+  const [tb, ts, tc, tcit, tu] = await Promise.all([
     prisma.barbero.count(),
     prisma.servicio.count(),
     prisma.cliente.count(),
     prisma.cita.count(),
+    prisma.usuario.count(),
   ]);
-  console.log(`✅ Listo. Barberos: ${tb}, Servicios: ${ts}, Clientes: ${tc}, Citas: ${tcit}`);
+  console.log(
+    `✅ Listo. Barberos: ${tb}, Servicios: ${ts}, Clientes: ${tc}, Citas: ${tcit}, Usuarios: ${tu}`,
+  );
 }
 
 main()
