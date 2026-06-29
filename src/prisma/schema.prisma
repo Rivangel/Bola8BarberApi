@@ -24,6 +24,8 @@ model Cliente {
   id        Int      @id @default(autoincrement())
   nombre    String
   telefono  String   @unique
+  /// Notas del barbero sobre el cliente (preferencias, alergias, etc.).
+  notas     String?
   createdAt DateTime @default(now())
 
   citas Cita[]
