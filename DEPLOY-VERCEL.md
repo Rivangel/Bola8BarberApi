@@ -29,18 +29,28 @@ para ponerla en producción.
 ## Pasos
 
 1. **Migraciones**: ejecútalas una vez contra la BD de producción desde tu máquina
-   (Vercel no corre `migrate deploy` dentro de la función):
+   (Vercel no corre `migrate deploy` dentro de la función). Usa el **Session pooler**
+   (`:5432`). El motor de migraciones acepta `sslmode=require`; el seed usa el cliente
+   en runtime, así que verifica el certificado con la CA:
    ```bash
-   DATABASE_URL="<cadena_directa_no_pooled>" npx prisma migrate deploy
-   DATABASE_URL="<cadena_directa_no_pooled>" npx prisma db seed   # opcional
+   # Migrar (motor de Prisma; TLS sin verificación estricta de CA)
+   DATABASE_URL="postgresql://...@...pooler.supabase.com:5432/postgres?sslmode=require" \
+     npx prisma migrate deploy
+
+   # Sembrar datos + usuario admin (cliente runtime; verifica con la CA)
+   DATABASE_CA_CERT_FILE="certs/supabase-ca.pem" \
+   DATABASE_URL="postgresql://...@...pooler.supabase.com:5432/postgres" \
+     npx prisma db seed
    ```
-   Para migrar usa la conexión **directa** (no la pooled).
 
 2. **Importar el proyecto en Vercel** (New Project → el repo). Root Directory:
    la carpeta de la API si el repo la contiene en subcarpeta; aquí es la raíz.
 
 3. **Variables de entorno** en Vercel (Project → Settings → Environment Variables):
-   - `DATABASE_URL` (la pooled)
+   - `DATABASE_URL` → la del **Transaction pooler** (`:6543`), **sin** `?sslmode=...`
+     (el SSL lo gestiona el código vía CA).
+   - `DATABASE_CA_CERT` → contenido PEM de `certs/supabase-ca.pem` (pega el bloque
+     completo `-----BEGIN/END CERTIFICATE-----`). Verifica el certificado de Supabase.
    - `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`
    - `JWT_SECRET`, `JWT_EXPIRE`
    - `TZ=America/Mexico_City`, `GRAPH_API_VERSION=v21.0`
@@ -72,3 +82,8 @@ para ponerla en producción.
   toda la app Express va detrás de un único handler, el `express.json({ verify })`
   sigue funcionando sin que Vercel consuma el body antes.
 - **Cold starts**: la primera petición tras inactividad será algo más lenta.
+- **TLS verificado con CA**: Supabase firma su certificado con una CA privada
+  (`Supabase Root 2021 CA`) que Node no trae de fábrica. Por eso el driver `pg` la
+  necesita explícitamente vía `DATABASE_CA_CERT`/`DATABASE_CA_CERT_FILE` (ver
+  `src/prisma/client.ts`). La CA pública está versionada en `certs/supabase-ca.pem`
+  (válida hasta 2031). Sin SSL configurado (local/Docker) la conexión va sin TLS.
