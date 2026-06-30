@@ -1,0 +1,11 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npx prisma generate",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/api" }
+  ],
+  "crons": [
+    { "path": "/api/cron/recordatorios-24h", "schedule": "0 15 * * *" },
+    { "path": "/api/cron/recordatorios-2h", "schedule": "0 * * * *" }
+  ]
+}

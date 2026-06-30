@@ -36,6 +36,9 @@ export const env = {
   jwtSecret: required('JWT_SECRET'),
   // Vigencia del token (formato de `jsonwebtoken`, p. ej. "7d", "12h").
   jwtExpire: optional('JWT_EXPIRE', '7d'),
+  // Secreto que protege los endpoints de cron (recordatorios) cuando se ejecutan
+  // en Vercel Cron en lugar de node-cron. Vercel envía `Authorization: Bearer <CRON_SECRET>`.
+  cronSecret: optional('CRON_SECRET', ''),
 };
 
 export type Env = typeof env;

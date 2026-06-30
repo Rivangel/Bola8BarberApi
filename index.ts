@@ -6,8 +6,13 @@ import authRoutes from './src/routes/auth.routes';
 import citasRoutes from './src/routes/citas.routes';
 import clientesRoutes from './src/routes/clientes.routes';
 import catalogoRoutes from './src/routes/catalogo.routes';
+import cronRoutes from './src/routes/cron.routes';
 import { requireAuth } from './src/middleware/requireAuth';
 import { iniciarProgramador } from './src/jobs/reminders';
+
+// En Vercel (serverless) no hay un proceso persistente: no se abre puerto con
+// `listen()` ni se usa node-cron (los recordatorios los dispara Vercel Cron).
+const enVercel = !!process.env.VERCEL;
 
 /**
  * Punto de entrada de la aplicación — Bola 8 Barbería.
@@ -48,8 +53,10 @@ app.get('/', (_req, res) => {
 app.use('/', webhookRoutes);
 
 // API REST de administración.
-// Las rutas de auth (login) son públicas; el resto requiere un JWT válido.
+// Las rutas de auth (login) y de cron son públicas (cron usa su propio secreto);
+// el resto requiere un JWT válido.
 app.use('/api', authRoutes);
+app.use('/api/cron', cronRoutes);
 app.use('/api', requireAuth);
 app.use('/api', citasRoutes);
 app.use('/api', clientesRoutes);
@@ -67,23 +74,27 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: 'Error interno del servidor.' });
 });
 
-const server = app.listen(env.port, () => {
-  console.log(`🚀 Servidor escuchando en el puerto ${env.port}`);
-  console.log(`   Entorno: ${env.nodeEnv} · Zona horaria: ${env.timezone}`);
-  iniciarProgramador();
-});
-
-// Cierre ordenado: desconectar Prisma y cerrar el servidor.
-async function cerrar(senal: string): Promise<void> {
-  console.log(`\n${senal} recibido. Cerrando...`);
-  server.close(async () => {
-    await prisma.$disconnect();
-    console.log('👋 Servidor cerrado correctamente.');
-    process.exit(0);
+// Arranque tradicional (local / Docker). En Vercel se omite: la plataforma
+// invoca el handler exportado por defecto y dispara los recordatorios vía cron.
+if (!enVercel) {
+  const server = app.listen(env.port, () => {
+    console.log(`🚀 Servidor escuchando en el puerto ${env.port}`);
+    console.log(`   Entorno: ${env.nodeEnv} · Zona horaria: ${env.timezone}`);
+    iniciarProgramador();
   });
-}
 
-process.on('SIGINT', () => cerrar('SIGINT'));
-process.on('SIGTERM', () => cerrar('SIGTERM'));
+  // Cierre ordenado: desconectar Prisma y cerrar el servidor.
+  const cerrar = async (senal: string): Promise<void> => {
+    console.log(`\n${senal} recibido. Cerrando...`);
+    server.close(async () => {
+      await prisma.$disconnect();
+      console.log('👋 Servidor cerrado correctamente.');
+      process.exit(0);
+    });
+  };
+
+  process.on('SIGINT', () => cerrar('SIGINT'));
+  process.on('SIGTERM', () => cerrar('SIGTERM'));
+}
 
 export default app;
